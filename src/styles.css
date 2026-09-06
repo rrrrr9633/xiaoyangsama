@@ -128,9 +128,6 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--red); outli
 .login-card, .archive-entry { position: relative; z-index: 1; width: min(100%, 510px); padding: 28px; border: 4px solid var(--wood-dark); background: var(--cream); box-shadow: 8px 8px 0 var(--wood-dark); }
 .login-card h1, .admin-intro h1, .archive-content h1 { margin: 0 0 13px; font-family: Georgia, serif; font-size: clamp(32px, 6vw, 57px); line-height: 1; letter-spacing: -.06em; }
 .login-lead, .admin-intro > p:last-of-type, .archive-lead { margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; line-height: 1.7; }
-.login-role-picker { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; margin: 23px 0 17px; }
-.login-role-picker button { min-height: 42px; border: 2px solid var(--wood); background: var(--white); color: var(--wood-dark); font-size: 11px; font-weight: 900; }
-.login-role-picker button.is-selected { background: var(--wood-dark); color: var(--white); }
 .login-code-label { display: block; margin-bottom: 7px; color: var(--wood); font-size: 11px; font-weight: 900; }
 .login-code-row { display: flex; gap: 8px; }.login-code-row input { min-width: 0; flex: 1; height: 45px; padding: 0 13px; border: 3px solid var(--wood-dark); background: var(--white); color: var(--ink); letter-spacing: .18em; }
 .login-scope { margin: 17px 0 0; padding-top: 13px; border-top: 2px dashed var(--line); color: var(--muted); font-size: 10px; font-weight: 700; line-height: 1.5; }
@@ -141,3 +138,17 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--red); outli
 .blessing-message-list, .finale-blessing-messages { display: grid; gap: 7px; }.blessing-message-list article, .finale-blessing-messages article { padding: 9px 11px; border: 2px solid var(--wood); background: var(--cream); }.blessing-message-list strong, .finale-blessing-messages strong { color: var(--red); font-size: 10px; }.blessing-message-list p, .finale-blessing-messages p { margin: 5px 0 0; color: var(--ink); font-size: 11px; font-weight: 700; line-height: 1.5; }.finale-blessing-messages { width: min(100%, 560px); margin: 0 auto; text-align: left; }
 @media (max-width: 760px) { .login-screen, .admin-screen, .archive-screen { padding-inline: 14px; }.login-card { padding: 21px 17px; }.admin-header { height: 64px; }.admin-layout { display: block; padding-top: 40px; }.admin-intro { position: static; margin-bottom: 25px; }.admin-intro h1 { font-size: 40px; }.archive-content { padding-top: 40px; }.archive-facts strong { font-size: 17px; }.archive-facts span { font-size: 8px; } }
 @media (max-width: 480px) { .login-code-row { display: grid; grid-template-columns: 1fr; }.login-code-row .primary-button { width: 100%; }.admin-blessing-row { grid-template-columns: 1fr; }.admin-media-grid { grid-template-columns: 1fr; }.archive-facts { grid-template-columns: repeat(2, 1fr); } }
+
+.story-gallery { display: grid; gap: 11px; margin: 0 0 14px; padding: 14px; border: 3px solid var(--wood); background: color-mix(in srgb, var(--cream-deep) 88%, transparent); }
+.story-gallery-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.story-gallery-heading strong { font-family: Georgia, serif; font-size: 17px; }
+.story-gallery-heading small { color: var(--muted); font-size: 10px; font-weight: 700; }
+.story-gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.story-photo-card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 9px; min-width: 0; padding: 7px; border: 2px solid var(--wood); background: var(--white); }
+.story-photo-card img { width: 96px; height: 96px; object-fit: cover; border: 2px solid var(--wood-dark); background: var(--cream); }
+.story-photo-card div { min-width: 0; }
+.story-photo-card strong { display: block; color: var(--ink); font-size: 10px; line-height: 1.4; }
+.story-photo-card p { margin: 5px 0 0; color: var(--muted); font-size: 9px; font-weight: 700; line-height: 1.45; }
+.archive-content > .story-gallery { margin: 25px 0 22px; }
+.archive-content > .story-gallery .story-gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 620px) { .story-gallery-grid, .archive-content > .story-gallery .story-gallery-grid { grid-template-columns: 1fr; }.story-photo-card { grid-template-columns: 88px minmax(0, 1fr); }.story-photo-card img { width: 88px; height: 88px; } }

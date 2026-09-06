@@ -1,4 +1,5 @@
 import { defaultBlessingConfig, type BlessingConfig, type StoryAssets } from "./assets";
+import { storyPhotos, type StoryPhoto } from "./story";
 import type { GameState } from "./game";
 
 export type MemoryArchive = {
@@ -8,6 +9,7 @@ export type MemoryArchive = {
   assets: StoryAssets;
   blessings: BlessingConfig;
   poster: string;
+  photoStories?: StoryPhoto[];
 };
 
 const databaseName = "time-letters-archives";
@@ -128,5 +130,6 @@ export function makeMemoryArchive(state: GameState, assets: StoryAssets, blessin
     assets: clone(assets),
     blessings: clone(blessings),
     poster,
+    photoStories: clone(storyPhotos),
   };
 }
