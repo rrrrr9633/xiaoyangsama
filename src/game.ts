@@ -1,4 +1,5 @@
 export type PlayMode = "real" | "remote";
+export type AppRole = "xiaoyang" | "admin";
 export type Chapter = "invite" | "station-one" | "station-two" | "finale" | "complete";
 export type StationId = "station-one" | "station-two" | "finale";
 export type CheckinMethod = "gps" | "qr" | "phrase" | "manual";
@@ -13,6 +14,12 @@ export type TaskId =
   | "final-checkin"
   | "final-code";
 
+export type GameEvent = {
+  type: "mode" | "journey" | "keyword" | "puzzle" | "memory" | "checkin" | "task" | "code" | "wish" | "birthday";
+  value: string;
+  at: string;
+};
+
 export interface GameState {
   chapter: Chapter;
   completedTasks: TaskId[];
@@ -24,6 +31,7 @@ export interface GameState {
   checkins: Partial<Record<StationId, CheckinMethod>>;
   playMode: PlayMode;
   revealedWishes: number[];
+  events: GameEvent[];
 }
 
 export const BIRTHDAY_CODE = "220906";
@@ -44,6 +52,7 @@ export const initialGameState: GameState = {
   checkins: {},
   playMode: "real",
   revealedWishes: [],
+  events: [],
 };
 
 export type GameAction =
@@ -56,7 +65,8 @@ export type GameAction =
   | { type: "set-final-code"; code: string }
   | { type: "reveal-wish"; index: number }
   | { type: "share" }
-  | { type: "open-birthday" };
+  | { type: "open-birthday" }
+  | { type: "reset-game" };
 
 const chapterTasks: Record<Exclude<Chapter, "invite" | "complete">, TaskId[]> = {
   "station-one": ["keywords", "puzzle", "station-one-checkin"],
@@ -82,8 +92,12 @@ const taskPetals: Partial<Record<TaskId, number>> = {
   "final-code": 6,
 };
 
-function isComplete(state: GameState, taskId: TaskId) {
+export function isTaskComplete(state: GameState, taskId: TaskId) {
   return state.completedTasks.includes(taskId);
+}
+
+function recordEvent(state: GameState, type: GameEvent["type"], value: string): GameState {
+  return { ...state, events: [...state.events, { type, value, at: new Date().toISOString() }] };
 }
 
 function tasksForChapter(chapter: Chapter): TaskId[] {
@@ -91,55 +105,59 @@ function tasksForChapter(chapter: Chapter): TaskId[] {
 }
 
 function advanceChapter(state: GameState): Chapter {
-  if (state.chapter === "station-one" && chapterTasks["station-one"].every((task) => isComplete(state, task))) {
+  if (state.chapter === "station-one" && chapterTasks["station-one"].every((task) => isTaskComplete(state, task))) {
     return "station-two";
   }
-  if (state.chapter === "station-two" && chapterTasks["station-two"].every((task) => isComplete(state, task))) {
+  if (state.chapter === "station-two" && chapterTasks["station-two"].every((task) => isTaskComplete(state, task))) {
     return "finale";
   }
   return state.chapter;
 }
 
 function completeTask(state: GameState, taskId: TaskId): GameState {
-  if (isComplete(state, taskId) || !tasksForChapter(state.chapter).includes(taskId)) return state;
-  const next = {
+  if (isTaskComplete(state, taskId) || !tasksForChapter(state.chapter).includes(taskId)) return state;
+  const next = recordEvent({
     ...state,
     completedTasks: [...state.completedTasks, taskId],
     petals: Math.min(WISH_COUNT, state.petals + (taskPetals[taskId] ?? 1)),
-  };
+  }, taskId === "puzzle" ? "puzzle" : "task", taskId);
   return { ...next, chapter: advanceChapter(next) };
 }
 
 export function reduceGame(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "choose-mode":
-      return { ...state, playMode: action.mode };
+      return recordEvent({ ...state, playMode: action.mode }, "mode", action.mode);
     case "start-journey":
-      return state.chapter === "invite" ? { ...state, chapter: "station-one" } : state;
-    case "select-keyword":
-      return state.selectedKeywords.includes(action.keyword)
-        ? { ...state, selectedKeywords: state.selectedKeywords.filter((keyword) => keyword !== action.keyword) }
+      return state.chapter === "invite" ? recordEvent({ ...state, chapter: "station-one" }, "journey", "start") : state;
+    case "select-keyword": {
+      const selectedKeywords = state.selectedKeywords.includes(action.keyword)
+        ? state.selectedKeywords.filter((keyword) => keyword !== action.keyword)
         : state.selectedKeywords.length >= 3
-          ? state
-          : { ...state, selectedKeywords: [...state.selectedKeywords, action.keyword] };
+          ? state.selectedKeywords
+          : [...state.selectedKeywords, action.keyword];
+      return recordEvent({ ...state, selectedKeywords }, "keyword", selectedKeywords.join("、"));
+    }
     case "set-memory-order":
-      return { ...state, memoryOrder: action.order };
+      return recordEvent({ ...state, memoryOrder: action.order }, "memory", action.order.join(" → "));
     case "set-final-code":
-      return { ...state, finalCode: action.code };
+      return recordEvent({ ...state, finalCode: action.code }, "code", action.code);
     case "reveal-wish":
-      return !isComplete(state, "final-code") || state.revealedWishes.includes(action.index) || action.index < 0 || action.index >= WISH_COUNT
+      return !isTaskComplete(state, "final-code") || state.revealedWishes.includes(action.index) || action.index < 0 || action.index >= WISH_COUNT
         ? state
-        : { ...state, revealedWishes: [...state.revealedWishes, action.index], petals: Math.min(WISH_COUNT, state.petals + 1) };
+        : recordEvent({ ...state, revealedWishes: [...state.revealedWishes, action.index], petals: Math.min(WISH_COUNT, state.petals + 1) }, "wish", String(action.index + 1));
     case "verify-checkin":
       return state.checkins[action.station] || !tasksForChapter(state.chapter).includes(stationTask[action.station])
         ? state
-        : completeTask({ ...state, checkins: { ...state.checkins, [action.station]: action.method } }, stationTask[action.station]);
+        : completeTask(recordEvent({ ...state, checkins: { ...state.checkins, [action.station]: action.method } }, "checkin", `${action.station}:${action.method}`), stationTask[action.station]);
     case "share":
-      return { ...state, shared: true };
+      return recordEvent({ ...state, shared: true }, "birthday", "archive-saved");
     case "open-birthday":
-      return isComplete(state, "final-code") && state.revealedWishes.length === WISH_COUNT
-        ? { ...state, chapter: "complete", petals: WISH_COUNT }
+      return isTaskComplete(state, "final-code") && state.revealedWishes.length === WISH_COUNT
+        ? recordEvent({ ...state, chapter: "complete", petals: WISH_COUNT }, "birthday", "opened")
         : state;
+    case "reset-game":
+      return { ...initialGameState };
     case "complete-task":
       return completeTask(state, action.taskId);
     default:
@@ -166,6 +184,7 @@ export function loadGame(): GameState {
       memoryOrder: Array.isArray(parsed.memoryOrder) ? parsed.memoryOrder : [],
       revealedWishes: allowedWishes,
       checkins: parsed.checkins ?? {},
+      events: Array.isArray(parsed.events) ? parsed.events : [],
     };
   } catch {
     return initialGameState;

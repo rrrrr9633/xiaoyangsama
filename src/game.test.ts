@@ -40,6 +40,12 @@ describe("birthday game state", () => {
     state = reduceGame(state, { type: "verify-checkin", station: "station-two", method: "manual" });
     expect(state.chapter).toBe("finale");
   });
+  it("records the choices and clears only current game progress", () => {
+    let state = reduceGame(initialGameState, { type: "start-journey" });
+    state = reduceGame(state, { type: "select-keyword", keyword: "勇敢" });
+    expect(state.events.some((event) => event.type === "keyword" && event.value === "勇敢")).toBe(true);
+    expect(reduceGame(state, { type: "reset-game" })).toEqual(initialGameState);
+  });
   it("accepts only the current birthday code", () => {
     expect(matchesBirthdayCode("111111")).toBe(false);
     expect(matchesBirthdayCode(" 220906 ")).toBe(true);
