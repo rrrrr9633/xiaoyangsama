@@ -345,28 +345,69 @@ function StationCodeKit() {
 
 function RouteMap({ activeIndex, state }: { activeIndex: number; state: GameState }) {
   const amapKey = import.meta.env.VITE_AMAP_KEY;
-  const serviceHost = import.meta.env.VITE_AMAP_SERVICE_HOST || "https://xn--sama-px9gg69g.top/_AMapService";
-  const [realMapReady, setRealMapReady] = useState(false);
+  const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE;
+  const serviceHost = import.meta.env.VITE_AMAP_SERVICE_HOST;
+  const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error" | "disabled">(amapKey ? "loading" : "disabled");
   const mapRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!amapKey || !mapRef.current) return;
-    window._AMapSecurityConfig = { serviceHost };
+    if (!amapKey || !mapRef.current) {
+      setMapStatus("disabled");
+      return;
+    }
+    let cancelled = false;
+    if (securityCode || serviceHost) window._AMapSecurityConfig = { securityJsCode: securityCode, serviceHost };
     const existing = document.querySelector<HTMLScriptElement>("script[data-amap]");
     const script = existing || document.createElement("script");
-    if (!existing) { script.dataset.amap = "true"; script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(amapKey)}`; script.async = true; document.head.appendChild(script); }
-    const onReady = () => setRealMapReady(Boolean(window.AMap));
-    script.addEventListener("load", onReady); if (window.AMap) onReady();
-    return () => script.removeEventListener("load", onReady);
-  }, [amapKey, serviceHost]);
+    const onLoad = () => {
+      if (!cancelled) setMapStatus(window.AMap ? "ready" : "error");
+    };
+    const onError = () => {
+      if (!cancelled) setMapStatus("error");
+    };
+    if (!existing) {
+      script.dataset.amap = "true";
+      script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(amapKey)}`;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener("load", onLoad);
+    script.addEventListener("error", onError);
+    if (window.AMap) onLoad();
+    return () => {
+      cancelled = true;
+      script.removeEventListener("load", onLoad);
+      script.removeEventListener("error", onError);
+    };
+  }, [amapKey, securityCode, serviceHost]);
   useEffect(() => {
-    if (!realMapReady || !mapRef.current || !window.AMap) return;
+    if (mapStatus !== "ready" || !mapRef.current || !window.AMap) return;
     const map = new window.AMap.Map(mapRef.current, { zoom: 12, center: [123.46, 41.81], viewMode: "2D" });
-    const markers = mapStops.map(({ position, label }) => { const marker = new window.AMap!.Marker({ position, title: label }); marker.setMap(map); return marker; });
-    const line = new window.AMap.Polyline({ path: mapStops.map((stop) => stop.position), strokeColor: "#c75b4f", strokeWeight: 4, strokeOpacity: .85, strokeStyle: "dashed", lineJoin: "round" });
-    line.setMap(map); map.setFitView?.(markers);
+    const markers = mapStops.map(({ position, label }, index) => {
+      const reached = index < activeIndex || state.chapter === "complete";
+      const active = index === activeIndex;
+      const marker = new window.AMap!.Marker({
+        position,
+        title: label,
+        anchor: "bottom-center",
+        content: `<div class="amap-route-marker ${active ? "is-active" : ""} ${reached ? "is-reached" : ""}"><b>${index === 2 ? "22" : `0${index + 1}`}</b><span>${label}</span></div>`,
+      });
+      marker.setMap(map);
+      return marker;
+    });
+    const line = new window.AMap.Polyline({ path: mapStops.map((stop) => stop.position), strokeColor: "#c75b4f", strokeWeight: 5, strokeOpacity: .9, strokeStyle: "dashed", lineJoin: "round" });
+    line.setMap(map);
+    map.setFitView?.(markers);
     return () => map.destroy();
-  }, [realMapReady]);
-  return <div className={`route-map ${realMapReady ? "has-real-map" : ""}`}><div className="real-map-layer" ref={mapRef} aria-label="沈阳地图" /><div className="map-grid" aria-hidden="true" /><div className="map-label map-label-a">惠工社区</div><div className="map-label map-label-b">东中街 · 沈河区</div><div className="map-label map-label-c">东北大马路</div><div className="map-road road-one" /><div className="map-road road-two" /><div className="map-road road-three" /><div className="map-path"><span className="path-segment segment-one" /><span className="path-segment segment-two" /></div>{chapters.map((chapter, index) => { const reached = index < activeIndex || state.chapter === "complete"; const available = index <= activeIndex || state.chapter === "complete"; const stop = mapStops[index]; return <div className={`map-stop map-stop-${index + 1} ${index === activeIndex ? "is-active" : ""} ${reached ? "is-reached" : ""}`} key={chapter.id}><b>{index === 2 ? "22" : `0${index + 1}`}</b><span>{available ? chapter.place.split(" · ")[0] : "待揭晓"}</span>{available && <a className="nav-button" href={`https://uri.amap.com/marker?position=${stop.position[0]},${stop.position[1]}&name=${encodeURIComponent(stop.label)}`} target="_blank" rel="noreferrer">导航</a>}</div>; })}<div className="map-compass">N<br /><span>+</span></div><div className="map-caption">沈阳夜行手账 <span>·</span> {realMapReady ? "实时位置" : "城市路线"}</div></div>;
+  }, [activeIndex, mapStatus, state.chapter]);
+  const statusCopy = mapStatus === "loading" ? "正在加载高德地图…" : mapStatus === "error" ? "高德地图加载失败，请检查 Key 与安全配置。" : mapStatus === "disabled" ? "尚未配置高德地图 Key。" : "高德地图 · 实时路线";
+  return <div className={`route-map route-map-${mapStatus}`}>
+    <div className="real-map-layer" ref={mapRef} aria-label="高德沈阳路线地图" />
+    {mapStatus !== "ready" && <div className="map-unavailable"><strong>{statusCopy}</strong><small>{mapStatus === "disabled" ? "配置 VITE_AMAP_KEY 后显示真实地图。" : "当前仍可使用下方站点导航和签到方式。"}</small></div>}
+    <div className="map-overlay">
+      <div className="map-overlay-heading"><strong>沈阳 · 生日路线</strong><span>{mapStatus === "ready" ? "ovo" : "地图状态"}</span></div>
+      <div className="map-stop-list">{chapters.map((chapter, index) => { const available = index <= activeIndex || state.chapter === "complete"; const stop = mapStops[index]; return <div className={`map-stop-card ${index === activeIndex ? "is-active" : ""} ${index < activeIndex || state.chapter === "complete" ? "is-reached" : ""}`} key={chapter.id}><b>{index === 2 ? "22" : `0${index + 1}`}</b><div><strong>{chapter.title}</strong><small>{available ? stop.label : "完成上一站后揭晓"}</small></div>{available && <a className="nav-button" href={`https://uri.amap.com/marker?position=${stop.position[0]},${stop.position[1]}&name=${encodeURIComponent(stop.label)}`} target="_blank" rel="noreferrer">导航</a>}</div>; })}</div>
+    </div>
+  </div>;
 }
 
 function TaskRow({ taskId, copy, done, onComplete, children }: { taskId: TaskId; copy: string; done: boolean; onComplete: () => void; children?: ReactNode }) {

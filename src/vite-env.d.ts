@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_AMAP_KEY?: string;
   readonly VITE_AMAP_SERVICE_HOST?: string;
+  readonly VITE_AMAP_SECURITY_CODE?: string;
 }
 
 interface ImportMeta {
@@ -11,7 +12,7 @@ interface ImportMeta {
 
 declare global {
   interface Window {
-    _AMapSecurityConfig?: { serviceHost: string };
+    _AMapSecurityConfig?: { securityJsCode?: string; serviceHost?: string };
     AMap?: {
       Map: new (container: HTMLElement, options: { zoom: number; center: [number, number]; viewMode?: string }) => { destroy: () => void; setFitView?: (overlays?: unknown[]) => void };
       Marker: new (options: { position: [number, number]; title?: string; content?: string; anchor?: string }) => { setMap: (map: unknown) => void };
