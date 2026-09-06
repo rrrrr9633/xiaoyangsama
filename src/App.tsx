@@ -50,7 +50,7 @@ const wishes = [
   "愿你永远拥有把平凡过得闪亮的能力。", "愿你想去的地方，都有好天气。", "愿你被认真倾听，也被温柔惦记。", "愿你的勇敢总有回声。", "愿你保留对世界的好奇。", "愿你每一次选择都更靠近自己。", "愿你笑起来的时候，眼睛一直有光。", "愿你遇见很多真诚的人。", "愿你不必迎合任何人的期待。", "愿你有说走就走的自由。", "愿你永远知道自己值得被爱。", "愿你忙有所获，闲有所乐。", "愿你把委屈留在昨天。", "愿你拥有属于自己的小小宇宙。", "愿你在新的一岁睡得好、吃得香。", "愿你想做的事，都能慢慢做到。", "愿你被生活偏爱，也有拥抱生活的力气。", "愿你一直是那个会发光的小漾。", "愿你身边始终有并肩的人。", "愿你不慌不忙，走自己的路。", "愿你每次回头，都看见我们在。", "生日快乐，22 岁的你值得所有好事。",
 ];
 
-type AssetReader = (event: ChangeEvent<HTMLInputElement>, key: "photo" | "audio" | "video" | "observation", index?: number) => void;
+type AssetReader = (event: ChangeEvent<HTMLInputElement>, key: "photo" | "observation", index?: number) => void;
 
 function describeEvent(event: GameEvent) {
   const labels: Record<GameEvent["type"], string> = { mode: "游玩方式", journey: "开始旅程", keyword: "关键词选择", puzzle: "拼图完成", memory: "时间线选择", checkin: "地点签到", task: "任务完成", code: "生日密码", wish: "愿望翻开", birthday: "生日终章" };
@@ -65,7 +65,7 @@ export default function App() {
   const [codeDraft, setCodeDraft] = useState(state.finalCode);
   const [errorMessage, setErrorMessage] = useState("");
   const [shareMessage, setShareMessage] = useState("");
-  const [assets, setAssets] = useState<StoryAssets>({ videos: [], observation: [] });
+  const [assets, setAssets] = useState<StoryAssets>({ observation: [] });
   const [blessings, setBlessings] = useState<BlessingConfig>(loadBlessingConfig);
   const [archives, setArchives] = useState<MemoryArchive[]>([]);
   const [selectedArchive, setSelectedArchive] = useState<MemoryArchive | null>(null);
@@ -117,11 +117,6 @@ export default function App() {
     reader.onload = () => {
       const data = String(reader.result);
       setAssets((current) => {
-        if (key === "video" && index !== undefined) {
-          const videos = [...current.videos];
-          videos[index] = data;
-          return { ...current, videos };
-        }
         if (key === "observation" && index !== undefined) {
           const observation = [...current.observation];
           observation[index] = data;
@@ -188,9 +183,9 @@ export default function App() {
     if (selectedArchive) return <ArchiveScreen archive={selectedArchive} onBack={() => setSelectedArchive(null)} onDelete={async () => { await deleteMemoryArchive(selectedArchive.id); setArchives((current) => current.filter((archive) => archive.id !== selectedArchive.id)); setSelectedArchive(null); }} />;
     return <LoginScreen archives={archives} onLogin={login} onArchive={setSelectedArchive} errorMessage={errorMessage} />;
   }
-  if (role === "admin") return <AdminScreen blessings={blessings} assets={assets} onAsset={readAsset} onSave={(next) => { setBlessings(next); saveBlessingConfig(next); }} onLogout={logout} />;
+  if (role === "admin") return <AdminScreen blessings={blessings} onSave={(next) => { setBlessings(next); saveBlessingConfig(next); }} onLogout={logout} />;
   if (state.chapter === "invite") return <InviteScreen mode={state.playMode} blessings={blessings} onMode={(mode) => dispatch({ type: "choose-mode", mode })} onStart={() => dispatch({ type: "start-journey" })} onLogout={logout} />;
-  if (state.chapter === "complete") return <FinaleScreen state={state} assets={assets} blessings={blessings} wishes={wishes} shareMessage={shareMessage} onShare={shareResult} onLogout={logout} />;
+  if (state.chapter === "complete") return <FinaleScreen state={state} blessings={blessings} wishes={wishes} shareMessage={shareMessage} onShare={shareResult} onLogout={logout} />;
 
   const activeChapter = state.chapter;
   const chapterIndex = Math.max(0, chapters.findIndex((chapter) => chapter.id === activeChapter));
@@ -211,7 +206,7 @@ export default function App() {
           <div className="section-rule"><span>当前任务</span><span className="petal-count"><b>{state.petals}</b> / 22 朵花瓣</span></div>
           {state.chapter === "station-one" && <StationOne state={state} assets={assets} onAsset={readAsset} keywordDraft={keywordDraft} onKeyword={chooseKeyword} onComplete={complete} onCheckin={checkin} />}
           {state.chapter === "station-two" && <StationTwo state={state} assets={assets} onAsset={readAsset} memoryDraft={memoryDraft} onMemory={setMemory} onComplete={complete} onCheckin={checkin} />}
-          {state.chapter === "finale" && <FinaleTasks state={state} blessings={blessings} codeDraft={codeDraft} setCodeDraft={setCodeDraft} errorMessage={errorMessage} onCode={openFinalCode} onCheckin={checkin} onOpen={openBirthday} assets={assets} wishes={wishes} revealedWishes={state.revealedWishes} onRevealWish={(index) => dispatch({ type: "reveal-wish", index })} />}
+          {state.chapter === "finale" && <FinaleTasks state={state} blessings={blessings} codeDraft={codeDraft} setCodeDraft={setCodeDraft} errorMessage={errorMessage} onCode={openFinalCode} onCheckin={checkin} onOpen={openBirthday} wishes={wishes} revealedWishes={state.revealedWishes} onRevealWish={(index) => dispatch({ type: "reveal-wish", index })} />}
         </div>
         <aside className="story-rail" aria-label="故事进度"><div className="rail-heading"><span>这趟路</span><span>{progress}%</span></div><div className="rail-track"><span style={{ height: `${Math.max(8, progress)}%` }} /></div><div className="rail-list">{chapters.map((chapter, index) => <div className={`rail-stop ${index <= chapterIndex ? "is-reached" : ""} ${index === chapterIndex ? "is-current" : ""}`} key={chapter.id}><span className="rail-dot" /><div><strong>{chapter.kicker}</strong><small>{index <= chapterIndex ? chapter.place.split(" · ")[0] : "下一封信"}</small></div></div>)}</div></aside>
       </section>
@@ -253,7 +248,7 @@ function StoryGallery({ photos, title = "记忆卡片" }: { photos: StoryPhoto[]
     <section className="story-gallery" aria-label={title}>
       <div className="story-gallery-heading">
         <strong>{title}</strong>
-        <small>这些片段，也被好好收进了今天。</small>
+        <small>第一块记忆碎片。</small>
       </div>
       <div className="story-gallery-grid">
         {photos.map((photo) => (
@@ -270,7 +265,7 @@ function StoryGallery({ photos, title = "记忆卡片" }: { photos: StoryPhoto[]
   );
 }
 
-function AdminScreen({ blessings, assets, onAsset, onSave, onLogout }: { blessings: BlessingConfig; assets: StoryAssets; onAsset: AssetReader; onSave: (config: BlessingConfig) => void; onLogout: () => void }) {
+function AdminScreen({ blessings, onSave, onLogout }: { blessings: BlessingConfig; onSave: (config: BlessingConfig) => void; onLogout: () => void }) {
   const [draft, setDraft] = useState(blessings);
   const updateArray = (key: "names" | "messages" | "openingEvaluations", index: number, value: string) => setDraft((current) => ({ ...current, [key]: current[key].map((item, itemIndex) => itemIndex === index ? value : item) }));
   const save = () => onSave(draft);
@@ -281,7 +276,6 @@ function AdminScreen({ blessings, assets, onAsset, onSave, onLogout }: { blessin
       <div className="admin-form">
         <section className="admin-section"><h2>开始时，大家怎样形容她</h2><p>这些评价会在小漾进入生日任务时展示。</p>{draft.openingEvaluations.map((item, index) => <input key={`evaluation-${index}`} value={item} onChange={(event) => updateArray("openingEvaluations", index, event.target.value)} placeholder={`评价 ${index + 1}`} />)}</section>
         <section className="admin-section"><h2>四位信使的祝福</h2><div className="admin-blessing-grid">{draft.messages.map((message, index) => <div className="admin-blessing-row" key={`blessing-${index}`}><input value={draft.names[index] || ""} onChange={(event) => updateArray("names", index, event.target.value)} aria-label={`信使 ${index + 1} 名称`} /><textarea value={message} onChange={(event) => updateArray("messages", index, event.target.value)} aria-label={`信使 ${index + 1} 文字`} rows={3} /></div>)}</div></section>
-        <section className="admin-section"><h2>语音与视频</h2><div className="admin-media-grid">{[0, 1, 2, 3].map((index) => <label className="admin-media-slot" key={index}>{assets.videos[index] ? <video src={assets.videos[index]} controls playsInline /> : <span>添加视频</span>}<strong>{draft.names[index] || `信使 ${index + 1}`}</strong><input type="file" accept="video/*" onChange={(event) => onAsset(event, "video", index)} /></label>)}</div><label className="admin-audio-slot">{assets.audio ? <audio src={assets.audio} controls /> : <span>添加语音信</span>}<input type="file" accept="audio/*" onChange={(event) => onAsset(event, "audio")} /></label></section>
       </div>
     </section>
   </main>;
@@ -291,7 +285,7 @@ function ArchiveScreen({ archive, onBack, onDelete }: { archive: MemoryArchive; 
   const { state, blessings } = archive;
   return <main className="archive-screen">
     <header className="admin-header"><div className="brand-lockup"><span className="brand-mark">22</span><span>封时光信 · 纪念档案</span></div><button className="text-button" onClick={() => { if (window.confirm("确定删除这份纪念档案吗？")) onDelete(); }}>删除这份档案</button><button className="text-button" onClick={onBack}>回到登录</button></header>
-    <section className="archive-content"><p className="chapter-kicker">{new Date(archive.savedAt).toLocaleString("zh-CN")}</p><h1>小漾的 22 岁生日</h1><p className="archive-lead">这份档案保存了当天的选择、路线、照片、祝福和 22 个愿望。</p><StoryGallery photos={archive.photoStories ?? storyPhotos} title="十个被记住的片段" />{archive.poster && <img className="archive-poster" src={archive.poster} alt="生日纪念海报" />}<section className="archive-media"><strong>当天留下的照片</strong>{archive.assets.photo && <img src={archive.assets.photo} alt="共同照片" />}{archive.assets.observation.filter(Boolean).length > 0 && <div>{archive.assets.observation.filter((item): item is string => Boolean(item)).map((item, index) => <img key={item} src={item} alt={`现场细节 ${index + 1}`} />)}</div>}{archive.assets.videos.filter(Boolean).length > 0 && <div className="archive-video-list">{archive.assets.videos.filter((item): item is string => Boolean(item)).map((item, index) => <video key={item} src={item} controls playsInline aria-label={`信使 ${index + 1} 的视频`} />)}</div>}{archive.assets.audio && <audio src={archive.assets.audio} controls />} </section><div className="archive-facts"><div><strong>{state.completedTasks.length}</strong><span>项任务完成</span></div><div><strong>{state.selectedKeywords.length}</strong><span>个关键词</span></div><div><strong>{state.revealedWishes.length}</strong><span>个愿望翻开</span></div><div><strong>{Object.keys(state.checkins).length}</strong><span>处签到</span></div></div><section className="archive-section"><h2>大家开始时这样形容她</h2><ul>{blessings.openingEvaluations.map((item) => <li key={item}>{item}</li>)}</ul></section><section className="archive-section"><h2>这趟路留下的选择</h2><p>关键词：{state.selectedKeywords.join("、") || "未记录"}</p><p>时间线：{state.memoryOrder.join(" → ") || "未记录"}</p><p>签到：{Object.entries(state.checkins).map(([station, method]) => `${station}（${method}）`).join("、") || "未记录"}</p><p>过程记录：{state.events.length} 条</p></section><section className="archive-section"><h2>完整过程记录</h2><ol className="archive-events">{state.events.map((event, index) => <li key={`${event.at}-${index}`}>{new Date(event.at).toLocaleTimeString("zh-CN")} · {describeEvent(event)}</li>)}</ol></section><section className="archive-section"><h2>信使的祝福</h2>{blessings.messages.map((message, index) => <article key={`${blessings.names[index]}-${message}`}><strong>{blessings.names[index]}</strong><p>{message}</p></article>)}</section><section className="archive-section"><h2>22 个愿望</h2><div className="archive-wishes">{wishes.map((wish, index) => <p key={wish}><strong>{String(index + 1).padStart(2, "0")}</strong>{wish}<span>{state.revealedWishes.includes(index) ? "已翻开" : "未翻开"}</span></p>)}</div></section></section>
+    <section className="archive-content"><p className="chapter-kicker">{new Date(archive.savedAt).toLocaleString("zh-CN")}</p><h1>小漾的 22 岁生日</h1><p className="archive-lead">这份档案保存了当天的选择、路线、照片、祝福和 22 个愿望。</p><StoryGallery photos={archive.photoStories ?? storyPhotos} title="十个被记住的片段" />{archive.poster && <img className="archive-poster" src={archive.poster} alt="生日纪念海报" />}<section className="archive-photos"><strong>当天留下的照片</strong>{archive.assets.photo && <img src={archive.assets.photo} alt="共同照片" />}{archive.assets.observation.filter(Boolean).length > 0 && <div>{archive.assets.observation.filter((item): item is string => Boolean(item)).map((item, index) => <img key={item} src={item} alt={`现场细节 ${index + 1}`} />)}</div>}</section><div className="archive-facts"><div><strong>{state.completedTasks.length}</strong><span>项任务完成</span></div><div><strong>{state.selectedKeywords.length}</strong><span>个关键词</span></div><div><strong>{state.revealedWishes.length}</strong><span>个愿望翻开</span></div><div><strong>{Object.keys(state.checkins).length}</strong><span>处签到</span></div></div><section className="archive-section"><h2>大家开始时这样形容她</h2><ul>{blessings.openingEvaluations.map((item) => <li key={item}>{item}</li>)}</ul></section><section className="archive-section"><h2>这趟路留下的选择</h2><p>关键词：{state.selectedKeywords.join("、") || "未记录"}</p><p>时间线：{state.memoryOrder.join(" → ") || "未记录"}</p><p>签到：{Object.entries(state.checkins).map(([station, method]) => `${station}（${method}）`).join("、") || "未记录"}</p><p>过程记录：{state.events.length} 条</p></section><section className="archive-section"><h2>完整过程记录</h2><ol className="archive-events">{state.events.map((event, index) => <li key={`${event.at}-${index}`}>{new Date(event.at).toLocaleTimeString("zh-CN")} · {describeEvent(event)}</li>)}</ol></section><section className="archive-section"><h2>信使的祝福</h2>{blessings.messages.map((message, index) => <article key={`${blessings.names[index]}-${message}`}><strong>{blessings.names[index]}</strong><p>{message}</p></article>)}</section><section className="archive-section"><h2>22 个愿望</h2><div className="archive-wishes">{wishes.map((wish, index) => <p key={wish}><strong>{String(index + 1).padStart(2, "0")}</strong>{wish}<span>{state.revealedWishes.includes(index) ? "已翻开" : "未翻开"}</span></p>)}</div></section></section>
   </main>;
 }
 function InviteScreen({ mode, blessings, onMode, onStart, onLogout }: { mode: PlayMode; blessings: BlessingConfig; onMode: (mode: PlayMode) => void; onStart: () => void; onLogout: () => void }) {
@@ -458,7 +452,7 @@ function CameraPhrasePanel({ phrase, setPhrase, onPhrase, onScan }: { phrase: st
 function StationOne({ state, assets, onAsset, keywordDraft, onKeyword, onComplete, onCheckin }: { state: GameState; assets: StoryAssets; onAsset: AssetReader; keywordDraft: string[]; onKeyword: (keyword: string) => void; onComplete: (taskId: TaskId) => void; onCheckin: (station: StationId, method: CheckinMethod) => void }) {
   const words = ["勇敢", "可爱", "嘴硬", "浪漫", "自由"];
   return <div className="task-list">
-    <StoryGallery photos={storyPhotosFor("station-one")} title="第一站，先把这两段记忆拼回去" />
+    <StoryGallery photos={storyPhotosFor("station-one")} title="第一站 " />
     <TaskRow taskId="keywords" copy="合成第一封信。" done={isTaskComplete(state, "keywords")} onComplete={() => onComplete("keywords")}>
       {!isTaskComplete(state, "keywords") && <div className="choice-block"><div className="choice-grid">{words.map((word) => <button className={`choice-chip ${keywordDraft.includes(word) ? "is-selected" : ""}`} key={word} onClick={() => onKeyword(word)}>{word}</button>)}</div><button className="inline-action" disabled={keywordDraft.length !== 3} onClick={() => onComplete("keywords")}>{keywordDraft.length === 3 ? "合成第一封信" : `请选择 ${3 - keywordDraft.length} 个词`}</button></div>}
       {isTaskComplete(state, "keywords") && <div className="letter-snippet">“你身上有勇敢的光，也有让人想一直靠近的自由。”</div>}
@@ -522,7 +516,7 @@ function StationTwo({ state, assets, onAsset, memoryDraft, onMemory, onComplete,
   </div>;
 }
 
-function FinaleTasks({ state, blessings, codeDraft, setCodeDraft, errorMessage, onCode, onCheckin, onOpen, assets, wishes, revealedWishes, onRevealWish }: { state: GameState; blessings: BlessingConfig; codeDraft: string; setCodeDraft: (value: string) => void; errorMessage: string; onCode: () => void; onCheckin: (station: StationId, method: CheckinMethod) => void; onOpen: () => void; assets: StoryAssets; wishes: string[]; revealedWishes: number[]; onRevealWish: (index: number) => void }) {
+function FinaleTasks({ state, blessings, codeDraft, setCodeDraft, errorMessage, onCode, onCheckin, onOpen, wishes, revealedWishes, onRevealWish }: { state: GameState; blessings: BlessingConfig; codeDraft: string; setCodeDraft: (value: string) => void; errorMessage: string; onCode: () => void; onCheckin: (station: StationId, method: CheckinMethod) => void; onOpen: () => void; wishes: string[]; revealedWishes: number[]; onRevealWish: (index: number) => void }) {
   const unlocked = isTaskComplete(state, "final-code");
   const arrived = isTaskComplete(state, "final-checkin");
   return <div className="finale-panel">
@@ -530,23 +524,19 @@ function FinaleTasks({ state, blessings, codeDraft, setCodeDraft, errorMessage, 
     <StoryGallery photos={storyPhotosFor("finale")} title="终章之前，先收下两份预热" />
     <CheckinPanel station="finale" place="东北大马路附近 · 烧烤 KTV" mode={state.playMode} checkin={state.checkins.finale} onCheckin={onCheckin} />
     {arrived && !unlocked && <div className="code-form"><label htmlFor="birthday-code">生日密码</label><div className="code-input-row"><input id="birthday-code" inputMode="numeric" maxLength={6} value={codeDraft} onChange={(event) => setCodeDraft(event.target.value.replace(/\\D/g, ""))} aria-label="六位生日密码" /><button className="primary-button" onClick={onCode}>打开信封</button></div>{errorMessage && <p className="form-error">{errorMessage}</p>}</div>}
-    {unlocked && <div className="unlocked-panel"><BlessingStudio assets={assets} blessings={blessings} /><div className="wishes-heading"><strong>给 22 岁的 22 个愿望</strong><small>点亮每一片花瓣，读一条写给她的话。</small></div><div className="flower-grid wish-grid">{wishes.map((wish, index) => <button className={`flower-petal ${revealedWishes.includes(index) ? "is-lit" : ""}`} key={wish} onClick={() => onRevealWish(index)} aria-label={`第 ${index + 1} 个愿望`}>{revealedWishes.includes(index) ? <span>{wish}</span> : index + 1}</button>)}</div><button className="primary-button large" onClick={onOpen}>打开生日终章 <span>↗</span></button>{errorMessage && <p className="form-error finale-error">{errorMessage}</p>}</div>}
+    {unlocked && <div className="unlocked-panel"><BlessingMessages blessings={blessings} /><div className="wishes-heading"><strong>给 22 岁的 22 个愿望</strong><small>点亮每一片花瓣，读一条写给她的话。</small></div><div className="flower-grid wish-grid">{wishes.map((wish, index) => <button className={`flower-petal ${revealedWishes.includes(index) ? "is-lit" : ""}`} key={wish} onClick={() => onRevealWish(index)} aria-label={`第 ${index + 1} 个愿望`}>{revealedWishes.includes(index) ? <span>{wish}</span> : index + 1}</button>)}</div><button className="primary-button large" onClick={onOpen}>打开生日终章 <span>↗</span></button>{errorMessage && <p className="form-error finale-error">{errorMessage}</p>}</div>}
   </div>;
 }
 
-function BlessingStudio({ assets, blessings }: { assets: StoryAssets; blessings: BlessingConfig }) {
-  const activeVideos = assets.videos.filter((video): video is string => Boolean(video));
+function BlessingMessages({ blessings }: { blessings: BlessingConfig }) {
   return <div className="blessing-studio">
     <div className="studio-heading"><strong>信使的祝福</strong><small>四位信使已经把想说的话放在这里。</small></div>
     <div className="blessing-message-list">{blessings.messages.map((message, index) => <article key={`${blessings.names[index]}-${message}`}><strong>{blessings.names[index]}</strong><p>{message}</p></article>)}</div>
-    {activeVideos.length > 0 && <div className="finale-videos">{activeVideos.map((video, index) => <video src={video} controls playsInline key={video} aria-label={`${blessings.names[index] || `信使 ${index + 1}`}的祝福`} />)}</div>}
-    {assets.audio && <audio src={assets.audio} controls />}
   </div>;
 }
 
-function FinaleScreen({ state, assets, blessings, wishes, shareMessage, onShare, onLogout }: { state: GameState; assets: StoryAssets; blessings: BlessingConfig; wishes: string[]; shareMessage: string; onShare: () => void; onLogout: () => void }) {
-  const activeVideos = assets.videos.filter((video): video is string => Boolean(video));
-  return <main className="finale-screen"><div className="finale-glow" aria-hidden="true" /><header className="invite-topbar"><div className="brand-lockup"><span className="brand-mark">22</span><span>封时光信</span></div><span className="invite-date">终章已打开 <button className="text-button" onClick={onLogout}>退出</button></span></header><section className="finale-content"><p className="chapter-kicker">To 小漾 · 22</p><h1>愿你以后每一次出发，<br /><em>都有喜欢的人在身边。</em></h1><p className="finale-copy">今天的路线走完了，故事还会继续。现在，请收下现实里的最后一件道具。</p><div className="bouquet"><div className="bouquet-stems" />{Array.from({ length: 22 }, (_, index) => <span className="bouquet-flower" key={index} style={{ "--i": index } as CSSProperties}>✦</span>)}</div><div className="blessing-reel"><div className="finale-blessing-messages">{blessings.messages.map((message, index) => <article key={`${blessings.names[index]}-${message}`}><strong>{blessings.names[index]}</strong><p>{message}</p></article>)}</div>{activeVideos.length > 0 && <div className="finale-videos">{activeVideos.map((video, index) => <video src={video} controls playsInline key={video} aria-label={`${blessings.names[index] || `信使 ${index + 1}`}的祝福`} />)}</div>}{assets.audio && <audio src={assets.audio} controls />}</div><div className="finale-wishes">{wishes.map((wish, index) => <article key={wish}><span>{String(index + 1).padStart(2, "0")}</span><p>{wish}</p></article>)}</div><div className="finale-actions"><button className="primary-button large" onClick={onShare}>{state.shared ? "纪念海报已保存" : "保存纪念海报"} <span>↗</span></button>{shareMessage && <span className="share-message">{shareMessage}</span>}<span>22 支花，等你在包间里亲手拆开。</span></div></section><footer className="invite-footer"><span>沈阳 · 生日任务完成</span><span>05 位同行者</span></footer></main>;
+function FinaleScreen({ state, blessings, wishes, shareMessage, onShare, onLogout }: { state: GameState; blessings: BlessingConfig; wishes: string[]; shareMessage: string; onShare: () => void; onLogout: () => void }) {
+  return <main className="finale-screen"><div className="finale-glow" aria-hidden="true" /><header className="invite-topbar"><div className="brand-lockup"><span className="brand-mark">22</span><span>封时光信</span></div><span className="invite-date">终章已打开 <button className="text-button" onClick={onLogout}>退出</button></span></header><section className="finale-content"><p className="chapter-kicker">To 小漾 · 22</p><h1>愿你以后每一次出发，<br /><em>都有喜欢的人在身边。</em></h1><p className="finale-copy">今天的路线走完了，故事还会继续。现在，请收下现实里的最后一件道具。</p><div className="bouquet"><div className="bouquet-stems" />{Array.from({ length: 22 }, (_, index) => <span className="bouquet-flower" key={index} style={{ "--i": index } as CSSProperties}>✦</span>)}</div><div className="blessing-reel"><div className="finale-blessing-messages">{blessings.messages.map((message, index) => <article key={`${blessings.names[index]}-${message}`}><strong>{blessings.names[index]}</strong><p>{message}</p></article>)}</div></div><div className="finale-wishes">{wishes.map((wish, index) => <article key={wish}><span>{String(index + 1).padStart(2, "0")}</span><p>{wish}</p></article>)}</div><div className="finale-actions"><button className="primary-button large" onClick={onShare}>{state.shared ? "纪念海报已保存" : "保存纪念海报"} <span>↗</span></button>{shareMessage && <span className="share-message">{shareMessage}</span>}<span>22 支花，等你在包间里亲手拆开。</span></div></section><footer className="invite-footer"><span>沈阳 · 生日任务完成</span><span>05 位同行者</span></footer></main>;
 }
 
 function fileToDataUrl(file: File): Promise<string> {

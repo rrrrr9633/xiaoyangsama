@@ -23,19 +23,17 @@ export const defaultBlessingConfig: BlessingConfig = {
 
 export type StoryAssets = {
   photo?: string;
-  videos: (string | undefined)[];
-  audio?: string;
   observation: (string | undefined)[];
 };
 
-type AssetSlot = "photo" | "audio" | "video" | "observation";
+type AssetSlot = "photo" | "observation";
 type AssetRecord = { slot: string; data: string };
 
 const databaseName = "time-letters-assets";
 const storeName = "private-assets";
 const fallbackKey = "time-letters-assets-v1";
 
-const emptyAssets = (): StoryAssets => ({ videos: [], observation: [] });
+const emptyAssets = (): StoryAssets => ({ observation: [] });
 
 function readFallbackAssets(): AssetRecord[] {
   try {
@@ -59,12 +57,6 @@ function writeFallbackAsset(record: AssetRecord) {
 function recordsToAssets(records: AssetRecord[]): StoryAssets {
   return records.reduce((assets, record) => {
     if (record.slot === "photo") return { ...assets, photo: record.data };
-    if (record.slot === "audio") return { ...assets, audio: record.data };
-    if (record.slot.startsWith("video-")) {
-      const videos = [...assets.videos];
-      videos[Number(record.slot.slice(6))] = record.data;
-      return { ...assets, videos };
-    }
     if (record.slot.startsWith("observation-")) {
       const observation = [...assets.observation];
       observation[Number(record.slot.slice(12))] = record.data;

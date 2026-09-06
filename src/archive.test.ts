@@ -22,7 +22,7 @@ describe("本机纪念档案", () => {
     };
     const archive = makeMemoryArchive(
       { ...initialGameState, chapter: "complete", shared: true },
-      { photo: "photo-data", audio: "audio-data", videos: ["video-data"], observation: ["detail-data"] },
+      { photo: "photo-data", observation: ["detail-data"] },
       blessings,
       "poster-data",
     );
@@ -32,7 +32,7 @@ describe("本机纪念档案", () => {
   });
 
   it("删除档案不会删除祝福配置", async () => {
-    const archive = makeMemoryArchive(initialGameState, { videos: [], observation: [] }, defaultBlessingConfig, "poster-data");
+    const archive = makeMemoryArchive(initialGameState, { observation: [] }, defaultBlessingConfig, "poster-data");
     await saveMemoryArchive(archive);
     const nextBlessings = { ...defaultBlessingConfig, messages: ["已准备好的祝福", ...defaultBlessingConfig.messages.slice(1)] };
 
@@ -44,16 +44,12 @@ describe("本机纪念档案", () => {
 });
 
 describe("本机素材", () => {
-  it("保存照片、语音、视频和现场细节后可以重新读取", async () => {
+  it("保存照片和现场细节后可以重新读取", async () => {
     await saveAsset("photo", "photo-data");
-    await saveAsset("audio", "audio-data");
-    await saveAsset("video", "video-data", 2);
     await saveAsset("observation", "detail-data", 1);
 
     await expect(loadAssets()).resolves.toEqual({
       photo: "photo-data",
-      audio: "audio-data",
-      videos: [,, "video-data"],
       observation: [, "detail-data"],
     });
   });

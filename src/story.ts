@@ -20,7 +20,7 @@ export type StoryPhoto = {
 };
 
 export const storyPhotos: StoryPhoto[] = [
-  { id: 1, src: photo01, title: "一起去皇城海洋乐园", note: "一起把那天的快乐带回来。", chapter: "station-one" },
+  { id: 1, src: photo01, title: "一起去皇城海洋乐园", note: "（>.<）", chapter: "station-one" },
   { id: 2, src: photo02, title: "一起吃必胜汉堡", note: "两个人的汉堡，要一起吃才算完整。", chapter: "station-one" },
   { id: 3, src: photo03, title: "龙之梦看到的可爱小狗狗", note: "在龙之梦突然遇见的可爱，被认真记住了。", chapter: "station-two" },
   { id: 4, src: photo04, title: "突然发现的很美的街道", note: "没有安排的风景，也会成为很美的一站。", chapter: "station-two" },
