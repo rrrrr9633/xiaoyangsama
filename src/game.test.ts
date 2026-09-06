@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialGameState, reduceGame, type GameState } from "./game";
+import { initialGameState, matchesBirthdayCode, reduceGame, type GameState } from "./game";
 
 describe("birthday game state", () => {
   it("starts at the invite chapter with no unlocked rewards", () => {
@@ -8,11 +8,12 @@ describe("birthday game state", () => {
     expect(initialGameState.petals).toBe(0);
   });
 
-  it("records a task once and grants one petal", () => {
-    const next = reduceGame(initialGameState, { type: "complete-task", taskId: "keywords" });
+  it("records a task once and grants its configured petals", () => {
+    const started = reduceGame(initialGameState, { type: "start-journey" });
+    const next = reduceGame(started, { type: "complete-task", taskId: "keywords" });
 
     expect(next.completedTasks).toEqual(["keywords"]);
-    expect(next.petals).toBe(1);
+    expect(next.petals).toBe(3);
     expect(reduceGame(next, { type: "complete-task", taskId: "keywords" })).toEqual(next);
   });
 
@@ -36,6 +37,27 @@ describe("birthday game state", () => {
     state = reduceGame(state, { type: "complete-task", taskId: "observation" });
     state = reduceGame(state, { type: "complete-task", taskId: "memory-order" });
     state = reduceGame(state, { type: "complete-task", taskId: "messenger" });
+    state = reduceGame(state, { type: "verify-checkin", station: "station-two", method: "manual" });
     expect(state.chapter).toBe("finale");
+  });
+  it("accepts only the current birthday code", () => {
+    expect(matchesBirthdayCode("111111")).toBe(false);
+    expect(matchesBirthdayCode(" 220906 ")).toBe(true);
+  });
+
+  it("opens the birthday finale only after all wishes are revealed", () => {
+    const locked: GameState = {
+      ...initialGameState,
+      chapter: "finale",
+      completedTasks: ["final-checkin", "final-code"],
+    };
+    expect(reduceGame(locked, { type: "open-birthday" }).chapter).toBe("finale");
+
+    const ready: GameState = {
+      ...locked,
+      revealedWishes: Array.from({ length: 22 }, (_, index) => index),
+      petals: 22,
+    };
+    expect(reduceGame(ready, { type: "open-birthday" }).chapter).toBe("complete");
   });
 });

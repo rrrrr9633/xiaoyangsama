@@ -1,0 +1,11 @@
+{
+  "name": "22封时光信",
+  "short_name": "时光信",
+  "description": "给小漾的生日任务",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#8fc7d1",
+  "theme_color": "#101827",
+  "lang": "zh-CN",
+  "icons": []
+}
